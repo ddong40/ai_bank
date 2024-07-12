@@ -1,147 +1,158 @@
+# DNN -> CNN
+
 import numpy as np
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM
-import sklearn as sk
-from sklearn.datasets import load_diabetes
-from sklearn.metrics import r2_score
-from tensorflow.keras.callbacks import EarlyStopping,ModelCheckpoint
+import pandas as pd
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import Dense, Dropout, Input, Conv2D, MaxPooling2D, Flatten, LSTM, Bidirectional
+from sklearn.model_selection import train_test_split
 import time
+from tensorflow.keras.callbacks import EarlyStopping
+from sklearn.metrics import r2_score, accuracy_score
 
 #1. 데이터
-datasets = load_diabetes()
-x = datasets.data
-y = datasets.target
+path = "C:/ai5/_data/dacon/diabetes/"
 
-from sklearn.model_selection import train_test_split
+train_csv = pd.read_csv(path + "train.csv", index_col=0)
+test_csv = pd.read_csv(path + "test.csv", index_col=0)
+sampleSubmission_csv = pd.read_csv(path + "sample_submission.csv", index_col=0)
 
-x_train, x_test, y_train, y_test = train_test_split(x, y,
-                                                    train_size=0.7,
-                                                    shuffle=True,
-                                                    random_state=250)
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
-from sklearn.preprocessing import MaxAbsScaler, RobustScaler
-scaler = RobustScaler()
-scaler.fit(x_train)
-x_train = scaler.transform(x_train)
-x_test = scaler.transform(x_test)
+print(train_csv.isna().sum())   # 0
+print(test_csv.isna().sum())    # 0
 
-print(x_train.shape) #309, 10
-print(x_test.shape) #133, 10
+x = train_csv.drop(['Outcome'], axis=1) 
+y = train_csv["Outcome"]
+print(x)    # [652 rows x 8 columns]
+print(y.shape)    # (652, )
 
-x_train = x_train.reshape(309, 10, 1)
-x_test = x_test.reshape(133, 10, 1)
+x = x.to_numpy()
+x = x.reshape(652, 4, 2)
+x = x/255.
 
-# print(x)
-# print(y)
-# print(x.shape, y.shape)   # (442, 10) (442,)
-# 분류 데이터는 0과 1만 있음 y값이 종류가 많으면 폐기모델
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=512)
 
-# [실습]
-# R2 0.62 이상 -0.1 (0.52)
 
-#2. 모델구성
+#2. 모델 구성
 model = Sequential()
-model.add(LSTM(10, input_shape=(10, 1)))
-model.add(Dense(128))
-model.add(Dense(128))
-model.add(Dense(128))
-model.add(Dense(64))
-model.add(Dense(64))
-model.add(Dense(64))
-model.add(Dense(64))
-model.add(Dense(32))
-model.add(Dense(32))
-model.add(Dense(32))
-model.add(Dense(16))
-model.add(Dense(16))
-model.add(Dense(1))
+model.add(Bidirectional(LSTM(128, input_shape=(4,2))))
+# model.add(Conv2D(128, (3,3), input_shape=(2,2,2), strides=1, activation='relu',padding='same')) 
+# model.add(Conv2D(filters=128, kernel_size=(3,3), activation='relu', strides=1,padding='same'))
+# model.add(MaxPooling2D())
+# model.add(Conv2D(64, (3,3), activation='relu', strides=1, padding='same'))        
+# model.add(Flatten())                            
+
+model.add(Dense(units=64, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(units=32, activation='relu'))
+model.add(Dense(units=16, activation='relu'))
+model.add(Dense(units=1, activation='sigmoid'))
 
 #3. 컴파일, 훈련
-model.compile(loss='mse', optimizer='adam')
-start = time.time()
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
 
-es = EarlyStopping(
-    monitor='val_loss',
-    mode = 'min',
-    patience = 30,
-    restore_best_weights=True
-)
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+es = EarlyStopping(monitor='val_loss', mode='min', 
+                   patience=10, verbose=1,
+                   restore_best_weights=True,
+                   )
+
+###### mcp 세이브 파일명 만들기 ######
 import datetime
 date = datetime.datetime.now()
-date = date.strftime('%m%d_%H%M')
+print(date)    
+print(type(date))  
+date = date.strftime("%m%d_%H%M")
+print(date)     
+print(type(date))  
 
-path1 = './_save/keras59/07_dacon_diabetes/'
-filename = '{epoch:04d}-{val_loss:.4f}.hdf5' # '1000-0.7777.hdf5'  #fit에서 반환되는 값을 빼오는 것이다. 
-filepath = "".join([path1, 'k30_', date, '_', filename])
+path = './_save/keras59/'
+filename = '{epoch:04d}-{val_loss:.4f}.hdf5' 
+filepath = "".join([path, 'k59_07_', date, '_', filename]) 
+#####################################
 
 mcp = ModelCheckpoint(
-    monitor = 'val_loss',
-    mode = 'auto',
-    verbose = 1,
-    save_best_only=True,
-    filepath = filepath
+    monitor='val_loss',
+    mode='auto',
+    verbose=1,     
+    save_best_only=True,   
+    filepath=filepath, 
 )
 
-
-hist = model.fit(x_train, y_train, epochs=1000, batch_size=2, verbose=1, 
-                 validation_split=0.25, callbacks=[es, mcp])
+start = time.time()
+hist = model.fit(x_train, y_train, epochs=1000, batch_size=16,
+          verbose=1, 
+          validation_split=0.1,
+          callbacks=[es, mcp],
+          )
 end = time.time()
 
+
 #4. 평가, 예측
-loss = model.evaluate(x_test, y_test)
+loss = model.evaluate(x_test, y_test, verbose=1)
+print('loss :', loss[0])
+print('acc :', round(loss[1],2))
+
+# print('acc :', round(loss[1],3))    # metrix 에서 설정한 값 반환   
+
+y_pred = model.predict(x_test)
+
+# r2 = r2_score(y_test, y_pred)
+# print('r2 score :', r2)
+
+y_pred = np.round(y_pred) 
+accuracy_score = accuracy_score(y_test, y_pred)
+print('acc_score :', accuracy_score)
+# print("걸린 시간 :", round(end-start,2),'초')
+
+print("걸린 시간 :", round(end-start,2),'초')
 
 
-y_predict = model.predict(x_test)
+### csv 파일 ###
+# y_submit = model.predict(test_csv)
+# y_submit = np.round(y_submit)
+# # print(y_submit)
+# sampleSubmission_csv['Outcome'] = y_submit
+# # print(sampleSubmission_csv)
+# sampleSubmission_csv.to_csv(path + "sampleSubmission_0725_1730_RS.csv")
 
-r2 = r2_score(y_test, y_predict)
 
-print("로스 : ", loss)
-print('r2 스코어 :',r2 )
+"""
+loss : 0.17662686109542847
+r2 score : 0.23671962825848636
+acc_score : 0.7727272727272727
 
-# print("r2스코어 : ", r2)
-# print("걸린시간 : ", round(end - start, 2), "초" )
-# print('=====================hist==========')
-# print(hist)
-# print('======================= hist.history==================')
-# print(hist.history)
-# print('================loss=================')
-# print(hist.history['loss'])
-# print('=================val_loss==============')
-# print(hist.history['val_loss'])
-# print('====================================================')
+[drop out]
+loss : 0.1760784089565277
+r2 score : 0.23908975869665205
+acc_score : 0.7424242424242424
 
-# import matplotlib.pyplot as plt
-# plt.figure(figsize=(9,6))
-# plt.plot(hist.history['loss'], c='red', label='loss')
-# plt.plot(hist.history['val_loss'], c='blue', label='val_loss')
-# plt.legend(loc='upper right') #라벨 값이 무엇인지 명시해주는 것이 레전드
-# plt.title('다이어베츠 Loss') #그래프의 제목 
-# plt.xlabel('epoch')
-# plt.ylabel('loss')
-# plt.grid()
-# plt.show()
+[함수형 모델]
+loss : 0.1697331964969635
+r2 score : 0.2665102161316174
+acc_score : 0.7575757575757576
 
-# 로스 :  3184.015869140625
-# r2 스코어 : 0.4863319871299602
+[CPU]
+loss : 0.18158185482025146
+r2 score : 0.21530700200079433
+acc_score : 0.7424242424242424
+걸린 시간 : 1.43 초
+GPU 없다!~!
 
-# minmaxscaler
-# 로스 :  3053.407958984375
-# r2 스코어 : 0.5074025892828946
+[GPU]
+loss : 0.17883329093456268
+r2 score : 0.2271846824795315
+acc_score : 0.7424242424242424
+걸린 시간 : 4.23 초
+GPU 돈다!~!
 
-# StandardScaler
-# 로스 :  2953.283203125
-# r2 스코어 : 0.5235553960095585
+[DNN -> CNN]
+loss : 0.5467386245727539
+acc : 0.8
+acc_score : 0.803030303030303
+걸린 시간 : 6.57 초
 
-# maxabsscaler
-# 로스 :  3072.412841796875
-# r2 스코어 : 0.5043365521694105
-
-# RobustScaler
-
-# 세이브 점수
-# 로스 :  3196.185791015625
-# r2 스코어 : 0.48436862012275794
-
-# LSTM
-# 로스 :  3134.6865234375
-# r2 스코어 : 0.49429018285296433
+[lSTM]
+loss : 0.5381918549537659
+acc : 0.74
+acc_score : 0.7424242424242424
+걸린 시간 : 8.43 초
+"""

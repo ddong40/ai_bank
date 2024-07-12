@@ -184,11 +184,7 @@ for i, a in train_loader:
     y_test2.extend(a.detach().cpu().numpy())        
 
 
-r2 = r2_score(y_predict, y_test2)  
+r2 = r2_score(y_predict, y_test2)  #r2score 출력!
 
 print(r2)
-
-
-
-
 

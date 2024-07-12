@@ -1,138 +1,124 @@
+# 26_7 copy
+# mcp save 
+
 import numpy as np
+import pandas as pd
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
-import sklearn as sk
-from sklearn.datasets import load_diabetes
-from sklearn.metrics import r2_score
-from tensorflow.keras.callbacks import EarlyStopping,ModelCheckpoint
+from sklearn.model_selection import train_test_split
 import time
+from tensorflow.keras.callbacks import EarlyStopping
+from sklearn.metrics import r2_score, accuracy_score
 
 #1. 데이터
-datasets = load_diabetes()
-x = datasets.data
-y = datasets.target
+path = "C:/ai5/_data/dacon/diabetes/"
 
-from sklearn.model_selection import train_test_split
+train_csv = pd.read_csv(path + "train.csv", index_col=0)
+test_csv = pd.read_csv(path + "test.csv", index_col=0)
+sampleSubmission_csv = pd.read_csv(path + "sample_submission.csv", index_col=0)
 
-x_train, x_test, y_train, y_test = train_test_split(x, y,
-                                                    train_size=0.7,
-                                                    shuffle=True,
-                                                    random_state=250)
+print(train_csv.isna().sum())   # 0
+print(test_csv.isna().sum())    # 0
+
+x = train_csv.drop(['Outcome'], axis=1) 
+y = train_csv["Outcome"]
+print(x)    # [652 rows x 8 columns]
+print(y.shape)    # (652, )
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=512)
+
+####### scaling (데이터 전처리) #######
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
-from sklearn.preprocessing import MaxAbsScaler, RobustScaler
-scaler = RobustScaler()
+scaler = StandardScaler()
 scaler.fit(x_train)
 x_train = scaler.transform(x_train)
 x_test = scaler.transform(x_test)
+test_csv = scaler.transform(test_csv)
 
-
-# print(x)
-# print(y)
-# print(x.shape, y.shape)   # (442, 10) (442,)
-# 분류 데이터는 0과 1만 있음 y값이 종류가 많으면 폐기모델
-
-# [실습]
-# R2 0.62 이상 -0.1 (0.52)
-
-#2. 모델구성
+#2. 모델 구성
 model = Sequential()
-model.add(Dense(128, input_dim=10))
-model.add(Dense(128))
-model.add(Dense(128))
-model.add(Dense(64))
-model.add(Dense(64))
-model.add(Dense(64))
-model.add(Dense(64))
-model.add(Dense(32))
-model.add(Dense(32))
-model.add(Dense(32))
-model.add(Dense(16))
-model.add(Dense(16))
-model.add(Dense(1))
+model.add(Dense(30, input_dim=8, activation='relu'))
+model.add(Dense(40, activation='relu'))
+model.add(Dense(50, activation='relu'))
+model.add(Dense(60, activation='relu'))
+model.add(Dense(50, activation='relu'))
+model.add(Dense(30, activation='relu'))
+model.add(Dense(20, activation='relu'))
+model.add(Dense(10, activation='relu'))
+model.add(Dense(7, activation='relu'))
+model.add(Dense(5, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+
+
 
 #3. 컴파일, 훈련
 model.compile(loss='mse', optimizer='adam')
-start = time.time()
 
-es = EarlyStopping(
-    monitor='val_loss',
-    mode = 'min',
-    patience = 30,
-    restore_best_weights=True
-)
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+es = EarlyStopping(monitor='val_loss', mode='min', 
+                   patience=10, verbose=1,
+                   restore_best_weights=True,
+                   )
+
+###### mcp 세이브 파일명 만들기 ######
 import datetime
 date = datetime.datetime.now()
-date = date.strftime('%m%d_%H%M')
+print(date)    
+print(type(date))  
+date = date.strftime("%m%d_%H%M")
+print(date)     
+print(type(date))  
 
-path1 = './_save/keras30_mcp/07_dacon_diabetes/'
-filename = '{epoch:04d}-{val_loss:.4f}.hdf5' # '1000-0.7777.hdf5'  #fit에서 반환되는 값을 빼오는 것이다. 
-filepath = "".join([path1, 'k30_', date, '_', filename])
+path = 'C:/ai5/_save/keras30_mcp/07_dacon_diabetes/'
+filename = '{epoch:04d}-{val_loss:.4f}.hdf5'    
+filepath = "".join([path, 'k30_', date, '_', filename])    
+#####################################
 
 mcp = ModelCheckpoint(
-    monitor = 'val_loss',
-    mode = 'auto',
-    verbose = 1,
-    save_best_only=True,
-    filepath = filepath
+    monitor='val_loss',
+    mode='auto',
+    verbose=1,     
+    save_best_only=True,   
+    filepath=filepath, 
 )
 
-
-
-hist = model.fit(x_train, y_train, epochs=1000, batch_size=2, verbose=1, 
-                 validation_split=0.25, callbacks=[es, mcp])
+start = time.time()
+hist = model.fit(x_train, y_train, epochs=1000, batch_size=16,
+          verbose=1, 
+          validation_split=0.1,
+          callbacks=[es, mcp],
+          )
 end = time.time()
 
+
 #4. 평가, 예측
-loss = model.evaluate(x_test, y_test)
+loss = model.evaluate(x_test, y_test, verbose=1)
+print('loss :', loss)
+# print('acc :', round(loss[1],3))    # metrix 에서 설정한 값 반환   
+
+y_pred = model.predict(x_test)
+
+r2 = r2_score(y_test, y_pred)
+print('r2 score :', r2)
+
+y_pred = np.round(y_pred) 
+accuracy_score = accuracy_score(y_test, y_pred)
+print('acc_score :', accuracy_score)
+# print("걸린 시간 :", round(end-start,2),'초')
 
 
-y_predict = model.predict(x_test)
+### csv 파일 ###
+# y_submit = model.predict(test_csv)
+# y_submit = np.round(y_submit)
+# # print(y_submit)
+# sampleSubmission_csv['Outcome'] = y_submit
+# # print(sampleSubmission_csv)
+# sampleSubmission_csv.to_csv(path + "sampleSubmission_0725_1730_RS.csv")
 
-r2 = r2_score(y_test, y_predict)
 
-print("로스 : ", loss)
-print('r2 스코어 :',r2 )
+"""
+loss : 0.17662686109542847
+r2 score : 0.23671962825848636
+acc_score : 0.7727272727272727
 
-# print("r2스코어 : ", r2)
-# print("걸린시간 : ", round(end - start, 2), "초" )
-# print('=====================hist==========')
-# print(hist)
-# print('======================= hist.history==================')
-# print(hist.history)
-# print('================loss=================')
-# print(hist.history['loss'])
-# print('=================val_loss==============')
-# print(hist.history['val_loss'])
-# print('====================================================')
-
-# import matplotlib.pyplot as plt
-# plt.figure(figsize=(9,6))
-# plt.plot(hist.history['loss'], c='red', label='loss')
-# plt.plot(hist.history['val_loss'], c='blue', label='val_loss')
-# plt.legend(loc='upper right') #라벨 값이 무엇인지 명시해주는 것이 레전드
-# plt.title('다이어베츠 Loss') #그래프의 제목 
-# plt.xlabel('epoch')
-# plt.ylabel('loss')
-# plt.grid()
-# plt.show()
-
-# 로스 :  3184.015869140625
-# r2 스코어 : 0.4863319871299602
-
-# minmaxscaler
-# 로스 :  3053.407958984375
-# r2 스코어 : 0.5074025892828946
-
-# StandardScaler
-# 로스 :  2953.283203125
-# r2 스코어 : 0.5235553960095585
-
-# maxabsscaler
-# 로스 :  3072.412841796875
-# r2 스코어 : 0.5043365521694105
-
-# RobustScaler
-
-# 세이브 점수
-# 로스 :  3196.185791015625
-# r2 스코어 : 0.48436862012275794
+"""

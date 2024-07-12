@@ -27,3 +27,8 @@ if cudnn_version is not None:
     print('cuDNN 버전 : ', cudnn_version) #CUDA 버전 :  12.4
 else : 
     print('cuDNN 없다!!!') #cuDNN 버전 :  90100
+
+# 이것은 토치로 gpu를 사용할 수 있는지 확인하는 코드입니다.
+
+# 이를 통해 gpu를 체크할 수 있습니다.
+

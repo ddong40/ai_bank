@@ -5,9 +5,6 @@ print(ak.__version__)   # 1.0.20
 print(tf.__version__)   # 2.15.1
 
 import time
-import os
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 #1. 데이터
 
@@ -30,7 +27,7 @@ best_model = model.export_model()       # 3개의 모델 중 최적의 모델
 print(best_model.summary())
 
 ###### 최적의 모델 저장 ######
-path = './_save/autokeras/'
+path = 'C:/ai5/_save/autokeras/'
 best_model.save(path + 'keras70_autokeras1.h5')
 
 #4. 평가 예측
@@ -43,8 +40,3 @@ y_pre2 = best_model.predict(x_test)
 # print('best_model 결과 :', result2)
 
 print('걸린 시간 :', round(end_time - start_time, 2), '초')
-
-# model 결과 : [0.038437675684690475, 0.9890000224113464]
-# 313/313 [==============================] - 0s 865us/step
-# 걸린 시간 : 42474.3 초
-

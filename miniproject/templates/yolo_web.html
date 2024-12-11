@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="5">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주차 정보</title>
+    <!-- HLS.js 라이브러리 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+    <h1>실시간 주차 정보</h1>
+    <p>주차장 내 자동차 수: {{ parking_info.car_count }} 대</p>
+    <p>빈 주차 자리 수: {{ parking_info.empty_spots }} 자리</p>
+
+    <!-- CCTV 스트리밍 추가 -->
+    <h2>실시간 CCTV 스트리밍</h2>
+    <video id="video" width="640" height="360" controls></video>
+
+    <script>
+        var video = document.getElementById('video');
+        var videoSrc = 'http://210.99.70.120:1935/live/cctv001.stream/playlist.m3u8';
+
+        if (Hls.isSupported()) {
+            var hls = new Hls();
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                video.play();
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = videoSrc;
+            video.addEventListener('loadedmetadata', function () {
+                video.play();
+            });
+        }
+    </script>
+</body>
+</html>

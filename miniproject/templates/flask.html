@@ -1,0 +1,21 @@
+<!-- Flask 서버에서 제공하는 /video_feed 스트림을 <img> 태그를 통해 바로 표시 -->
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="5">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주차 정보</title>
+</head>
+<body>
+    <h1>실시간 주차 정보</h1>
+    <p>주차장 내 자동차 수: {{ parking_info.car_count }} 대</p>
+    <p>빈 주차 자리 수: {{ parking_info.empty_spots }} 자리</p>
+
+    <!-- CCTV 스트리밍 추가 -->
+    <h2>실시간 CCTV 스트리밍</h2>
+    <img src="{{ url_for('video_feed') }}" alt="Video Feed" style="width: 640px; height: 360px;">
+</body>
+</html>
+

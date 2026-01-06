@@ -1,0 +1,67 @@
+# -----------------------
+# Python / notebooks
+# -----------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+
+# -----------------------
+# Environments / secrets
+# -----------------------
+.env
+*.env
+*.key
+*.pem
+*.jsonl
+*.sqlite
+*.db
+
+# -----------------------
+# Data (DO NOT COMMIT)
+# -----------------------
+data/
+dataset/
+datasets/
+raw/
+processed/
+outputs/
+runs/
+logs/
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.joblib
+*.zip
+*.tar
+*.gz
+*.7z
+
+# -----------------------
+# Model weights / artifacts
+# -----------------------
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.tflite
+*.engine
+
+# -----------------------
+# IDE / OS
+# -----------------------
+.vscode/
+.cursor/
+.idea/
+.DS_Store
+Thumbs.db
